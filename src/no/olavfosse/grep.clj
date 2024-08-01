@@ -1,5 +1,47 @@
 (ns no.olavfosse.grep
-  (import java.util.LinkedList))
+  (:require [hyperfiddle.rcf :refer [tests]])
+  (:import java.util.LinkedList))
+
+(hyperfiddle.rcf/enable!)
+
+(def ^:private test-transactions
+  [{:status :success
+    :product :chocolate}
+   {:status :success
+    :product :kebab}
+   {:status :success
+    :product :burger}
+   {:status :success
+    :product :energy-drink}
+   {:status :success
+    :product :chicken}
+   {:status :failure
+    :product :bus-ticket}
+   {:status :failure
+    :product :wolt-bike}
+   {:status :failure
+    :product :umbrella}
+
+   ;; Next day
+   {:status :success
+    :product :second-hand-bike}
+
+   ;; Friday
+   {:status :success
+    :time "2024-08-01T17:21:36"
+    :product :cider}
+   {:status :success
+    :time "2024-08-01T17:31:36"
+    :product :mango-ipa}
+   {:status :success
+    :time "2024-08-01T17:41:36"
+    :product :pils}
+   {:status :success
+    :time "2024-08-01T17:51:36"
+    :product :pils}
+   {:status :success
+    :time "2024-08-01T17:51:36"
+    :product :kebab}])
 
 (defn -B "Returns a stateful transducer akin to $ grep -B n <pred>"
   [n pred]
@@ -19,21 +61,26 @@
                  (if (reduced? rv) rv (recur rv)))
                (rf acc inp)))))))))
 (tests
- (into []
-       (-B 2 #(= % :HERE))
-       [:HERE "fdjkasl" "fkla" "jfka" "jkfdla" :HERE :HERE "jfkdlas" "kjlfa" "jkflda" :HERE]) := [:HERE "jfka" "jkfdla" :HERE :HERE "kjlfa" "jkflda" :HERE]
- ;; To test that we handle reduced values properly - which we do
- (defn ffff [xform]
-   (transduce xform
-              (completing (fn [acc inp]
-                            (if (= inp :REDUCED)
-                              (reduced acc)
-                              (conj acc inp))))
-              []
-              [:buzz :fizz :boo :REDUCED :baa ]))
- (ffff (-B 10000 (constantly true))) := (ffff (map identity))
- 
- )
+  ;; What lead up to not being able to afford the bus ticket?
+  (into [] (-B 3 (fn [{:keys [status product]}] (= [status product] [:failure :bus-ticket]))) test-transactions)
+  := [{:status :success
+       :product :burger}
+      {:status :success
+       :product :energy-drink}
+      {:status :success
+       :product :chicken}
+      {:status :failure
+       :product :bus-ticket}]
+
+  ;; What happened right before and after the failing to purchase a bus ticket?
+  (into [] (-C 1 (fn [{:keys [status product]}] (= [status product] [:failure :bus-ticket]))) test-transactions)
+  := [{:status :success
+       :product :chicken}
+      {:status :failure
+       :product :bus-ticket}
+      {:status :failure
+       :product :wolt-bike}]
+  )
 
 (defn -A "Returns a stateful transducer akin to $ grep -A n <pred>"
   [n pred]

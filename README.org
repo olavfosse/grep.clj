@@ -1,7 +1,0 @@
-**UNDER CONSTRUCTION**
-
-I'm working on a little library for bringing the niceties of grep out
-of the dark sluggish chambers of the unix realm.
-
-I haven't quite decided on the API yet and I need to test this a bit
-to make sure I covered all the edge cases.
